@@ -5,10 +5,16 @@
 """
 
 # Winning patterns - Used for check_winning()
-_rows = [(0, 0), (0, 1), (0, 2)], [(1, 0), (1, 1), (1, 2)], [(2, 0), (2, 1), (2, 2)]
-_columns = [(0, 0), (1, 0), (2, 0)], [(0, 1), (1, 1), (2, 1)], [(0, 2), (1, 2), (2, 2)]
-_diagonals = [(0, 0), (1, 1), (2, 2)], [(0, 2), (1, 1), (2, 0)]
-winning_patterns = [_rows, _columns, _diagonals]
+winning_patterns = [
+    [(0, 0), (0, 1), (0, 2)],  # Row 1
+    [(1, 0), (1, 1), (1, 2)],  # Row 2
+    [(2, 0), (2, 1), (2, 2)],  # Row 3
+    [(0, 0), (1, 0), (2, 0)],  # Column 1
+    [(0, 1), (1, 1), (2, 1)],  # Column 2
+    [(0, 2), (1, 2), (2, 2)],  # Column 3
+    [(0, 0), (1, 1), (2, 2)],  # Diagonal 1
+    [(0, 2), (1, 1), (2, 0)],  # Diagonal 2
+]
 
 
 class Game:
@@ -23,24 +29,14 @@ class Game:
         if all(cell != " " for row in self.game_board for cell in row):
             self.winner = "DRAW"
             print("Game was a {} !!!".format(self.winner))
-            exit()
+            self.status = True
 
     def check_winner(self, player: str):
-        # my idea is to check if designated player
-        # is present on any of the winning_patterns instead of hardcode the ifs
-        verify_cells_for_winning = 0
         for pattern in winning_patterns:
-            for list_of_coords in pattern:
-                for coord in list_of_coords:
-                    row, col = coord
-                    if not (self.game_board[row][col] == player):
-                        break
-                    verify_cells_for_winning += 1
-                    if verify_cells_for_winning == 3:
-                        self.winner = player
-                        print("And we have a winner: {} !!".format(self.winner))
-                # reset verification after all the coords were verified
-                verify_cells_for_winning = 0
+            if all(self.game_board[row][col] == player for row, col in pattern):
+                self.winner = player
+                print(f"And we have a winner: {self.winner} !!")
+                self.status = True
 
     def display_board(self):
         for row in self.game_board:
