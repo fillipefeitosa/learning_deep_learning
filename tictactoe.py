@@ -21,9 +21,18 @@ class Game:
 
     def __init__(self):
         self.game_board = [[" " for _ in range(3)] for _ in range(3)]
+        self.status = False  # Indicates if game ended
+        self.winner = None  # Tracks the winner
 
+    # ---- Q-learning agent specifics
+    def get_state(self):
+        return tuple(cell for row in self.game_board for cell in row)
+
+    # ---- Game Mechanics -----
     def reset_board(self):
         self.game_board = [[" " for _ in range(3)] for _ in range(3)]
+        self.status = False
+        self.winner = None
 
     def check_draw(self):
         if all(cell != " " for row in self.game_board for cell in row):
@@ -59,6 +68,8 @@ class Game:
         self.check_winner(player)
         self.check_draw()
         self.display_board()
+        # return is needed for an automated gameplay
+        return self.status, self.winner
 
 
 # Main execution
@@ -74,3 +85,4 @@ if __name__ == "__main__":
     my_game.make_move("O", (2, 1))
     my_game.make_move("X", (1, 2))
     my_game.make_move("X", (2, 0))
+    print(my_game.get_state())
