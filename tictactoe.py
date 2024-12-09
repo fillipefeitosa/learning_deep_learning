@@ -1,10 +1,18 @@
 """ 
     A deep  learning algo to learn how to play
     tic tac toe.
-    Step1: Create the tic-tac-toe environment
+    Step 1: Create the tic-tac-toe game board and working environment
+    Step 2: Create a Q-lerning agent that can play the game by itself, initialize and store a Q-table
+    Step 3: TODO: Implement the reward system to improve the exploit behavior
 """
 
 # Winning patterns - Used for check_winning()
+import random
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 winning_patterns = [
     [(0, 0), (0, 1), (0, 2)],  # Row 1
     [(1, 0), (1, 1), (1, 2)],  # Row 2
@@ -17,6 +25,75 @@ winning_patterns = [
 ]
 
 
+class QLearningAgent:
+
+    def __init__(self, episilon=0.1):
+        self.q_table = {}
+        self.active_player = "X"
+        self.episilon = episilon
+
+    def initialize_q_value(self, state, action):
+        if state not in self.q_table:
+            self.q_table[state] = {}
+
+        # if action does not exist, add a default value
+        # logger.info("action: {}".format(action))
+        # print("action {}".format(action))
+        if action not in self.q_table[state]:
+            self.q_table[state][action] = 0.0  # default q-value
+
+    def decide_next_move(self, state, valid_actions):
+
+        if random.random() <= self.episilon:  # explore
+            move = random.choice(valid_actions)
+        else:  # exploit
+            # Check if the state exists in the q-table, if not explore
+            if state not in self.q_table or not self.q_table[state]:
+                move = random.choice(valid_actions)
+
+            max_q_value = max(self.q_table[state].values())
+            best_actions = [
+                action
+                for action, value in self.q_table[state].items()
+                if value == max_q_value
+            ]
+            move = random.choice(best_actions)
+
+        return move
+        # return move
+
+    def play_match(self):
+        # start a new match
+        new_game = Game()
+
+        # and start making valid moves while the still runs (status == False)
+        while True:
+            # Check empty spaces for valid plays
+            valid_actions = [
+                (row, col)
+                for row in range(3)
+                for col in range(3)
+                if new_game.game_board[row][col] == " "
+            ]
+
+            state = new_game.get_state()
+
+            for action in valid_actions:
+                self.initialize_q_value(state, action)
+
+            move = self.decide_next_move(state, valid_actions)
+
+            status, winner = new_game.make_move(self.active_player, move)
+            if status:
+                print("Game is over. Final result is: {}".format(winner))
+                break
+            self.active_player = (
+                "O" if self.active_player == "X" else "X"
+            )  # Switch player
+        new_game.display_board()
+        print("Played one match. Going for the next one.")
+
+
 class Game:
 
     def __init__(self):
@@ -26,6 +103,12 @@ class Game:
 
     # ---- Q-learning agent specifics
     def get_state(self):
+        """Get the Game State, how the board is filled,
+        reprenting the moves done so far.
+
+        Returns:
+            tuple: A tuple with current state of the game (Eg. (' ', ' ', ' ', ' ', 'X', ' ', ' ', ' ', ' '))
+        """
         return tuple(cell for row in self.game_board for cell in row)
 
     # ---- Game Mechanics -----
@@ -35,6 +118,8 @@ class Game:
         self.winner = None
 
     def check_draw(self):
+        if self.status:  # Exit if the game is over. Prevens self.winner from overwrite
+            return
         if all(cell != " " for row in self.game_board for cell in row):
             self.winner = "DRAW"
             print("Game was a {} !!!".format(self.winner))
@@ -67,7 +152,7 @@ class Game:
         self.game_board[row][col] = player
         self.check_winner(player)
         self.check_draw()
-        self.display_board()
+        # self.display_board()
         # return is needed for an automated gameplay
         return self.status, self.winner
 
@@ -75,14 +160,6 @@ class Game:
 # Main execution
 if __name__ == "__main__":
     print("Let's start playing TicTacToe!")
-    my_game = Game()
-    my_game.make_move("X", (1, 1))
-    my_game.make_move("O", (1, 0))
-    my_game.make_move("X", (0, 0))
-    my_game.make_move("O", (0, 2))
-    my_game.make_move("X", (0, 1))
-    my_game.make_move("O", (2, 2))
-    my_game.make_move("O", (2, 1))
-    my_game.make_move("X", (1, 2))
-    my_game.make_move("X", (2, 0))
-    print(my_game.get_state())
+    my_agent = QLearningAgent()
+
+    my_agent.play_match()
