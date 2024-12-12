@@ -3,12 +3,17 @@
     tic tac toe.
     Step 1: Create the tic-tac-toe game board and working environment
     Step 2: Create a Q-lerning agent that can play the game by itself, initialize and store a Q-table
-    Step 3: TODO: Implement the reward system to improve the exploit behavior
+    Step 3: Implement the reward system to improve the exploit behavior
+    Step 4: Make the agent play, record and displays statistics
 """
 
 # Winning patterns - Used for check_winning()
 import random
 import logging
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +32,7 @@ winning_patterns = [
 
 class QLearningAgent:
 
-    available_rewards = {"X": 1, "O": -1, "DRAW": -0.1}  # -0.01 is for neutral moves
+    available_rewards = {"X": 10, "O": -5, "DRAW": -0.1}  # -0.01 is for neutral moves
 
     def __init__(self, episilon=0.1, alpha=0.1, gamma=0.99):
         self.q_table = {}
@@ -129,12 +134,12 @@ class QLearningAgent:
             self.update_q_table(state, new_game.get_state(), move, new_game.status)
 
             if status:
-                print("Game is over. Final result is: {}".format(winner))
-                break
+                # print("Game is over. Final result is: {}".format(winner))
+                return winner
             self.active_player = (
                 "O" if self.active_player == "X" else "X"
             )  # Switch player
-        new_game.display_board()
+        # new_game.display_board()
 
 
 class Game:
@@ -165,14 +170,14 @@ class Game:
             return
         if all(cell != " " for row in self.game_board for cell in row):
             self.winner = "DRAW"
-            print("Game was a {} !!!".format(self.winner))
+            # print("Game was a {} !!!".format(self.winner))
             self.status = True
 
     def check_winner(self, player: str):
         for pattern in winning_patterns:
             if all(self.game_board[row][col] == player for row, col in pattern):
                 self.winner = player
-                print(f"And we have a winner: {self.winner} !!")
+                # print(f"And we have a winner: {self.winner} !!")
                 self.status = True
 
     def display_board(self):
@@ -200,9 +205,80 @@ class Game:
         return self.status, self.winner
 
 
+# Process stats for plotting and analysis
+def process_stats_for_plot(stats_for_plot):
+    # Convert stats to a DataFrame for easier processing
+    stats_df = pd.DataFrame.from_dict(
+        stats_for_plot, orient="index", columns=["Winner"]
+    )
+    stats_df.index.name = "Episode"
+
+    # Count cumulative wins for each player
+
+    cumulative_wins = pd.DataFrame(0, index=stats_df.index, columns=["X", "O", "DRAW"])
+
+    # Calculate percentages
+    for episode, winner in stats_df["Winner"].items():
+        if winner in cumulative_wins.columns:
+            cumulative_wins.loc[episode:, winner] += 1
+
+    # Calculate percentages
+    cumulative_wins["Total"] = cumulative_wins.sum(axis=1)
+    percentages = cumulative_wins.div(cumulative_wins["Total"], axis=0) * 100
+    percentages.drop(columns=["Total"], inplace=True)
+
+    return percentages
+
+
+stats_for_plot = {}
+
+
+# Trainning flow logic
+def train_agent(agent: QLearningAgent, episodes=10000):
+    track_wins = {"X": 0, "O": 0, "DRAW": 0}
+
+    for episode in tqdm(range(episodes), desc="Trainning Agent"):
+        winner = agent.play_match()
+        if winner in track_wins:
+            stats_for_plot[episode] = winner
+            track_wins[winner] += 1
+
+    print("\nTrainning Complete!")
+    print("\nFinal Stats: {}".format(track_wins))
+
+
 # Main execution
 if __name__ == "__main__":
     print("Let's start playing TicTacToe!")
     my_agent = QLearningAgent()
 
-    my_agent.play_match()
+    train_agent(my_agent, 100000)
+
+    percentages = process_stats_for_plot(stats_for_plot)
+
+    plt.figure(figsize=(10, 6))
+
+    colors = {"X": "blue", "O": "red", "DRAW": "green"}
+
+    for player in percentages.columns:
+        plt.plot(
+            percentages.index,
+            percentages[player],
+            label=f"{player} Win %",
+            color=colors[player],
+        )
+
+    # Add a horizontal line for 50% as a reference
+    plt.axhline(50, color="gray", linestyle="--", label="50% Line")
+
+    # Add titles and labels
+    plt.title("Training Convergence of Tic-Tac-Toe Agent", fontsize=14)
+    plt.xlabel("Episodes", fontsize=12)
+    plt.ylabel("Win Percentage (%)", fontsize=12)
+
+    # Add legend and grid
+    plt.legend()
+    plt.grid(True)
+
+    # Display the plot
+    plt.show()
