@@ -27,10 +27,48 @@ winning_patterns = [
 
 class QLearningAgent:
 
-    def __init__(self, episilon=0.1):
+    available_rewards = {"X": 1, "O": -1, "DRAW": -0.1}  # -0.01 is for neutral moves
+
+    def __init__(self, episilon=0.1, alpha=0.1, gamma=0.99):
         self.q_table = {}
         self.active_player = "X"
         self.episilon = episilon
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def update_q_table(self, state, next_state, action, status):
+
+        if (
+            status and status in self.available_rewards.keys()
+        ):  # basically when the game finishes
+            reward = self.available_rewards[status]
+        else:
+            reward = 0.01  # encourage winning quickly
+
+        # Let's ensure that current state and following actions exists in Q-table
+        if state not in self.q_table:
+            self.q_table[state] = {}
+        if action not in self.q_table[state]:
+            self.q_table[state][action] = 0.0
+
+        current_q_value = self.q_table[state][action]
+        # max_q_value_from_state = max(self.q_table[state].values())
+
+        # Max q_value needs to be the highest q-value from the next possible action
+        if next_state in self.q_table:
+            max_q_value_from_next_state = max(
+                self.q_table[next_state].values(), default=0.0
+            )
+        else:
+            max_q_value_from_next_state = (
+                0.0  # Default for terminal states, when game ends
+            )
+
+        updated_q_value = current_q_value + self.alpha * (
+            reward + self.gamma * max_q_value_from_next_state - current_q_value
+        )
+
+        self.q_table[state][action] = updated_q_value
 
     def initialize_q_value(self, state, action):
         if state not in self.q_table:
@@ -52,6 +90,7 @@ class QLearningAgent:
                 move = random.choice(valid_actions)
 
             max_q_value = max(self.q_table[state].values())
+            # get the highest value if a Tie exists
             best_actions = [
                 action
                 for action, value in self.q_table[state].items()
@@ -83,7 +122,12 @@ class QLearningAgent:
 
             move = self.decide_next_move(state, valid_actions)
 
+            # self.update_q_table(state)
+
             status, winner = new_game.make_move(self.active_player, move)
+
+            self.update_q_table(state, new_game.get_state(), move, new_game.status)
+
             if status:
                 print("Game is over. Final result is: {}".format(winner))
                 break
@@ -91,7 +135,6 @@ class QLearningAgent:
                 "O" if self.active_player == "X" else "X"
             )  # Switch player
         new_game.display_board()
-        print("Played one match. Going for the next one.")
 
 
 class Game:
